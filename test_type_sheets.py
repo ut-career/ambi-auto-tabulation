@@ -132,50 +132,6 @@ def get_current_month():
     toStr = str(current_month)
     return toStr
 
-# def test_write_to_google_sheets():
-#     data_list = [
-#         {
-#             "jobName": "山中沙矢",
-#             "data": ['山中沙矢', '3', '0', '0.0%', '0', '0', '---', '0.0%', '0', '---']
-#         },
-#         {
-#             "jobName": "橘萌生",
-#             "data": ['橘萌生', '2', '0', '0.0%', '0', '0', '---', '0.0%', '0', '---']
-#         },
-#         {
-#             "jobName": "奥野翔子",
-#             "data": ['奥野翔子', '2', '0', '0.0%', '0', '0', '---', '0.0%', '0', '---']
-#         }
-#     ]
-
-#     """
-#     データをGoogleスプレッドシートに書き込む
-#     """
-#     # Google Sheets API認証
-#     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-#     credentials = Credentials.from_service_account_file(
-#         SERVICE_ACCOUNT_FILE,
-#         scopes=scope
-#     )
-#     gc = gspread.authorize(credentials)
-   
-
-#     current_month_value = get_current_month()
-#     # スプレッドシートを取得
-#     sheet = gc.open("テスト").worksheet("2025.01")
-#     sheet_data = sheet.get_all_values()
-
-#     # 書き込み
-#     row = 2  # データの開始行（1行目はヘッダー）
-#     for entry in data_list:
-#         sheet.update_cell(row, 1, entry["date"])           # 日付
-#         sheet.update_cell(row, 2, entry["data_type"])      # データ種別
-#         sheet.update_cell(row, 3, entry["jobName"])        # jobName
-#         sheet.update_cell(row, 4, ", ".join(entry["data"]))  # データ（カンマ区切り）
-#         row += 1
-
-#     print("Googleスプレッドシートにデータを書き込みました。")
-
 def data_entry_position(contact_name, scout_type):
     """
     データを書き込む位置を取得
@@ -217,9 +173,9 @@ def get_column_from_date(date_str):
 
 def write_to_google_sheets(all_scout_data):
     # all_scout_data = [
-    #     ("2025-01-01", "platinum", "山中沙矢", {'contact_name': '山中沙矢', 'send_count': '3', 'opens_count': '0', 'open_rate': '0.0%', 'refusals_count': '0', 'entry_count': '0', 'post_opening_entry_rate': '---', 'entry_rate': '0.0%', 'interview_req_count': '0', 'interview_req_rate': '---'}),
-    #     ("2025-01-02", "regular", "橘萌生", {'contact_name': '橘萌生', 'send_count': '2', 'opens_count': '1', 'open_rate': '50.0%', 'refusals_count': '0', 'entry_count': '1', 'post_opening_entry_rate': '100.0%', 'entry_rate': '50.0%', 'interview_req_count': '1', 'interview_req_rate': '50.0%'}),
-    #     ("2025-01-03", "interested", "奥野翔子", {'contact_name': '奥野翔子', 'interested_count': '2', 'passed_judgement_count': '0', 'passed_judgement_rate': '0.0%', 'refusals_count': '0', 'entry_count': '0','entry_rate': '0.0%', 'interview_req_count': '0', 'interview_req_rate': '---'}),
+    #     {"2025-01-01", "platinum", "山中沙矢", {'contact_name': '山中沙矢', 'send_count': '3', 'opens_count': '0', 'open_rate': '0.0%', 'refusals_count': '0', 'entry_count': '0', 'post_opening_entry_rate': '---', 'entry_rate': '0.0%', 'interview_req_count': '0', 'interview_req_rate': '---'}},
+    #     {"2025-01-02", "regular", "橘萌生", {'contact_name': '橘萌生', 'send_count': '2', 'opens_count': '1', 'open_rate': '50.0%', 'refusals_count': '0', 'entry_count': '1', 'post_opening_entry_rate': '100.0%', 'entry_rate': '50.0%', 'interview_req_count': '1', 'interview_req_rate': '50.0%'}},
+    #     {"2025-01-03", "interested", "奥野翔子", {'contact_name': '奥野翔子', 'interested_count': '2', 'passed_judgement_count': '0', 'passed_judgement_rate': '0.0%', 'refusals_count': '0', 'entry_count': '0','entry_rate': '0.0%', 'interview_req_count': '0', 'interview_req_rate': '---'}},
     # ]
 
     """
@@ -244,10 +200,10 @@ def write_to_google_sheets(all_scout_data):
     # 書き込み
     for entry in all_scout_data:
         print(entry)
-        date = entry[0]
-        scout_type = entry[1]
-        contact_name = entry[2]
-        scout_mail_stats_dict = entry[3]
+        date = entry["date"]
+        scout_type = entry["data_type"]
+        contact_name = entry["contact_name"]
+        scout_mail_stats_dict = entry["scout_mail_stats_dict"]
         send_count = scout_mail_stats_dict["send_count"] if scout_type in ["platinum", "regular"] else 0 # 送信数
         opens_count = scout_mail_stats_dict["opens_count"] if scout_type in ["platinum", "regular"] else 0 # 開封数
         entry_count = scout_mail_stats_dict["entry_count"]
