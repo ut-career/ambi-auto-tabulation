@@ -1,7 +1,6 @@
 import os
 import time
 from datetime import datetime, timedelta
-
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -11,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 
 # 環境変数の読み込み
 load_dotenv()
@@ -31,7 +30,7 @@ ENDPOINTS = {
 COMMON_PARAMS = "PK=CA19C6"
 
 # Google Sheets設定
-SHEET_NAME = "あなたのスプレッドシート名"  # スプレッドシート名
+SHEET_NAME = "AMBIエントリー分析_エージェント_2024"  # スプレッドシート名
 SERVICE_ACCOUNT_FILE = "service_account.json"  # サービスアカウントのJSONファイル
 
 def setup_driver():
@@ -103,23 +102,50 @@ def fetch_data_by_job_names(driver, date, data_type, target_job_names):
     
     return results
 
-def write_to_google_sheets(data_list):
+def get_current_month():
+    today = datetime.today()
+    current_month = f"{today.year}.{today.month:02d}"
+    toStr = str(current_month)
+    return toStr
+
+
+def write_to_google_sheets():
+    data_list = [
+        {
+            "jobName": "山中沙矢",
+            "data": ['山中沙矢', '3', '0', '0.0%', '0', '0', '---', '0.0%', '0', '---']
+        },
+        {
+            "jobName": "橘萌生",
+            "data": ['橘萌生', '2', '0', '0.0%', '0', '0', '---', '0.0%', '0', '---']
+        },
+        {
+            "jobName": "奥野翔子",
+            "data": ['奥野翔子', '2', '0', '0.0%', '0', '0', '---', '0.0%', '0', '---']
+        }
+    ]
     """
     データをGoogleスプレッドシートに書き込む
     """
     # Google Sheets API認証
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
+    credentials = Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE,
+        scopes=scope
+    )
     gc = gspread.authorize(credentials)
-    
+   
+
+    current_month_value = get_current_month()
     # スプレッドシートを取得
-    sheet = gc.open(SHEET_NAME).sheet1
+    sheet = gc.open("テスト").worksheet("2025.01")
+    sheet_data = sheet.get_all_values()
 
     # 書き込み
     row = 2  # データの開始行（1行目はヘッダー）
     for entry in data_list:
-        sheet.update_cell(row, 1, entry["date"])           # 日付
-        sheet.update_cell(row, 2, entry["data_type"])      # データ種別
+        # sheet.update_cell(row, 1, entry["date"])           # 日付
+        # sheet.update_cell(row, 2, entry["data_type"])      # データ種別
         sheet.update_cell(row, 3, entry["jobName"])        # jobName
         sheet.update_cell(row, 4, ", ".join(entry["data"]))  # データ（カンマ区切り）
         row += 1
@@ -140,12 +166,12 @@ def main():
 
         # データ収集
         today = datetime.today()
-        start_date = today - timedelta(days=60)  # 過去60日分
+        start_date = today - timedelta(days=3)  # 過去60日分
 
         # 指定するjobNameのリスト
         target_job_names = ["山中沙矢", "橘萌生", "奥野翔子"]
 
-        for single_date in (start_date + timedelta(n) for n in range(60)):
+        for single_date in (start_date + timedelta(n) for n in range(3)):
             formatted_date = single_date.strftime("%Y-%m-%d")
             print(f"\n{formatted_date}のデータ収集を開始:")
 

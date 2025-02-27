@@ -1,3 +1,4 @@
 /.venv
 .env
 ambi_data.csv
+service_account.json

@@ -106,7 +106,7 @@ def save_to_csv(data_list, filename='ambi_data.csv'):
     """
     データをCSVファイルに保存
     """
-    keys = ['date', 'data_type', 'jobName', 'data',data_list]
+    keys = ['date', 'data_type', 'jobName', 'data']
     
     with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=keys)
@@ -131,12 +131,12 @@ def main():
 
         # データ収集
         today = datetime.today()
-        start_date = today - timedelta(days=60)  # 過去60日分
+        start_date = today - timedelta(days=3)  # 過去60日分
 
         # 指定するjobNameのリスト
         target_job_names = ["山中沙矢", "橘萌生", "奥野翔子"]
 
-        for single_date in (start_date + timedelta(n) for n in range(60)):
+        for single_date in (start_date + timedelta(n) for n in range(3)):
             formatted_date = single_date.strftime("%Y-%m-%d")
             print(f"\n{formatted_date}のデータ収集を開始:")
 
