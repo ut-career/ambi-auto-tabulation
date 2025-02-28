@@ -89,7 +89,7 @@ def fetch_data_by_contact_names(driver, date, data_type, contact_names):
             
             # 各td要素のテキストを取得
             scout_mail_stats = [td.text for td in data_tds]
-            if(len(scout_mail_stats) == 8):
+            if len(scout_mail_stats) == 8:
                 scout_mail_stats_dict = dict(
                     contact_name = scout_mail_stats[0],
                     interested_count = scout_mail_stats[1],
@@ -114,15 +114,30 @@ def fetch_data_by_contact_names(driver, date, data_type, contact_names):
                     interview_req_rate = scout_mail_stats[9],
                 )
 
-            # 結果を保存
-            results.append({
-                "contact_name": contact_name,
-                "scout_mail_stats_dict": scout_mail_stats_dict
-            })
-            print(f"{contact_name}のデータ:{scout_mail_stats_dict}")
-        
         except Exception as e:
+            # 指定したjobNameが見つからない場合のエラーハンドリング
             print(f"{contact_name}のデータ取得中にエラーが発生しました: {e}")
+            scout_mail_stats_dict = dict(
+                contact_name = contact_name,
+                send_count = 0,
+                opens_count = 0,
+                open_rate = 0,
+                refusals_count = 0,
+                entry_count = 0,
+                post_opening_entry_rate = 0,
+                entry_rate = 0,
+                interview_req_count = 0,
+                interview_req_rate = 0,
+                interested_count = 0,
+                passed_judgement_count = 0,
+                passed_judgement_rate = 0,
+            )
+
+        results.append({
+            "contact_name": contact_name,
+            "scout_mail_stats_dict": scout_mail_stats_dict
+        })
+        print(f"{contact_name}のデータ:{scout_mail_stats_dict}")
     
     return results
 
@@ -201,8 +216,10 @@ def write_to_google_sheets(all_scout_data):
     )
     gc = gspread.authorize(credentials)
 
+    current_month = get_current_month()
+
     # スプレッドシートを取得
-    sheet = gc.open("テスト").worksheet("シート2")
+    sheet = gc.open("AMBIエントリー分析_エージェント_2024").worksheet(current_month)
 
     # バッチ書き込みのためのリクエストリスト
     requests = []
@@ -212,11 +229,11 @@ def write_to_google_sheets(all_scout_data):
         scout_type = entry["data_type"]
         contact_name = entry["contact_name"]
         scout_mail_stats_dict = entry["scout_mail_stats_dict"]
-        send_count = scout_mail_stats_dict["send_count"] if scout_type in ["platinum", "regular"] else 0 # 送信数
-        opens_count = scout_mail_stats_dict["opens_count"] if scout_type in ["platinum", "regular"] else 0 # 開封数
-        entry_count = scout_mail_stats_dict["entry_count"]
-        interested_count = scout_mail_stats_dict["interested_count"] if scout_type == "interested" else 0
-        interested_entry_count = scout_mail_stats_dict["entry_count"] if scout_type == "interested" else 0
+        send_count = int(scout_mail_stats_dict["send_count"]) if scout_type in ["platinum", "regular"] else 0 # 送信数
+        opens_count = int(scout_mail_stats_dict["opens_count"]) if scout_type in ["platinum", "regular"] else 0 # 開封数
+        entry_count = int(scout_mail_stats_dict["entry_count"])
+        interested_count = int(scout_mail_stats_dict["interested_count"]) if scout_type == "interested" else 0
+        interested_entry_count = int(scout_mail_stats_dict["entry_count"]) if scout_type == "interested" else 0
 
         # 該当セルにデータを書き込むリクエストを追加
         if scout_type in ["platinum", "regular"]:
@@ -263,7 +280,7 @@ def main():
         today = datetime.today()
         start_date = today - timedelta(days=14)  # 過去14日分
         # 指定するjobNameのリスト
-        contact_names = ["山中沙矢", "橘萌生", "奥野翔子"]
+        contact_names = ["橘萌生", "奥野翔子"]
 
         for single_date in (start_date + timedelta(n) for n in range(14)):
             formatted_date = single_date.strftime("%Y-%m-%d")
