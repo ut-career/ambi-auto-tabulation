@@ -225,15 +225,15 @@ def write_to_google_sheets(all_scout_data):
     requests = []
 
     for entry in all_scout_data:
-        date = entry["date"]
-        scout_type = entry["data_type"]
-        contact_name = entry["contact_name"]
-        scout_mail_stats_dict = entry["scout_mail_stats_dict"]
+        date = entry["date"] # 日付
+        scout_type = entry["data_type"] # スカウトタイプ
+        contact_name = entry["contact_name"] # エージェント名
+        scout_mail_stats_dict = entry["scout_mail_stats_dict"] # 集計データの辞書
         send_count = int(scout_mail_stats_dict["send_count"]) if scout_type in ["platinum", "regular"] else 0 # 送信数
         opens_count = int(scout_mail_stats_dict["opens_count"]) if scout_type in ["platinum", "regular"] else 0 # 開封数
-        entry_count = int(scout_mail_stats_dict["entry_count"])
-        interested_count = int(scout_mail_stats_dict["interested_count"]) if scout_type == "interested" else 0
-        interested_entry_count = int(scout_mail_stats_dict["entry_count"]) if scout_type == "interested" else 0
+        entry_count = int(scout_mail_stats_dict["entry_count"]) #エントリー数
+        interested_count = int(scout_mail_stats_dict["interested_count"]) if scout_type == "interested" else 0 # 興味あり数
+        interested_entry_count = int(scout_mail_stats_dict["entry_count"]) if scout_type == "interested" else 0 # 興味ありエントリー数
 
         # 該当セルにデータを書き込むリクエストを追加
         if scout_type in ["platinum", "regular"]:
