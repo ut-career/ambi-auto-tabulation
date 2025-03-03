@@ -89,7 +89,7 @@ def fetch_data_by_contact_names(driver, date, data_type, contact_names):
             
             # 各td要素のテキストを取得
             scout_mail_stats = [td.text for td in data_tds]
-            if(len(scout_mail_stats) == 8):
+            if len(scout_mail_stats) == 8:
                 scout_mail_stats_dict = dict(
                     contact_name = scout_mail_stats[0],
                     interested_count = scout_mail_stats[1],
@@ -114,23 +114,32 @@ def fetch_data_by_contact_names(driver, date, data_type, contact_names):
                     interview_req_rate = scout_mail_stats[9],
                 )
 
-            # 結果を保存
-            results.append({
-                "contact_name": contact_name,
-                "scout_mail_stats_dict": scout_mail_stats_dict
-            })
-            print(f"{contact_name}のデータ:{scout_mail_stats_dict}")
-        
         except Exception as e:
+            # 指定したjobNameが見つからない場合のエラーハンドリング
             print(f"{contact_name}のデータ取得中にエラーが発生しました: {e}")
+            scout_mail_stats_dict = dict(
+                contact_name = contact_name,
+                send_count = 0,
+                opens_count = 0,
+                open_rate = 0,
+                refusals_count = 0,
+                entry_count = 0,
+                post_opening_entry_rate = 0,
+                entry_rate = 0,
+                interview_req_count = 0,
+                interview_req_rate = 0,
+                interested_count = 0,
+                passed_judgement_count = 0,
+                passed_judgement_rate = 0,
+            )
+
+        results.append({
+            "contact_name": contact_name,
+            "scout_mail_stats_dict": scout_mail_stats_dict
+        })
+        print(f"{contact_name}のデータ:{scout_mail_stats_dict}")
     
     return results
-
-def get_current_month():
-    today = datetime.today()
-    current_month = f"{today.year}.{today.month:02d}"
-    toStr = str(current_month)
-    return toStr
 
 def data_entry_position(contact_name, scout_type):
     """
@@ -159,25 +168,37 @@ def data_entry_position(contact_name, scout_type):
             return 81
 
 
+def get_column_letter(column_number):
+    """
+    列番号をExcelの列文字に変換する
+    例: 1 -> A, 2 -> B, ..., 27 -> AA
+    """
+    column_letter = ""
+    while column_number > 0:
+        column_number, remainder = divmod(column_number - 1, 26)
+        column_letter = chr(65 + remainder) + column_letter
+    return column_letter
+
 def get_column_from_date(date_str):
     """
     YYYY-MM-DD形式の日付を受け取り、対応する列番号（整数）を返す。
     例: '2025-01-01' → 7 (G列), '2025-01-02' → 8 (H列)
+         一週間ごとに1列空ける。例: '2025-01-08' → 15 (O列)
     """
+    import datetime
 
     base_column_index = ord("G") - ord("A") + 1  # 'G'列はExcel上で7列目
-    day = int(date_str.split("-")[2])  # 日にちを取得
-    column_number = base_column_index + day - 1  # G列からスタート
-    print(f"column_number の値: {column_number}, 型: {type(column_number)}")
-    return column_number  
+    date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+    day_of_month = date.day
+
+    # 一週間ごとに1列空ける。7日ごとに1列追加。
+    extra_columns = (day_of_month - 1) // 7
+
+    # ベース列 + 日数 - 1 + 空ける列数
+    column_number = base_column_index + day_of_month - 1 + extra_columns
+    return get_column_letter(column_number)
 
 def write_to_google_sheets(all_scout_data):
-    # all_scout_data = [
-    #     {"2025-01-01", "platinum", "山中沙矢", {'contact_name': '山中沙矢', 'send_count': '3', 'opens_count': '0', 'open_rate': '0.0%', 'refusals_count': '0', 'entry_count': '0', 'post_opening_entry_rate': '---', 'entry_rate': '0.0%', 'interview_req_count': '0', 'interview_req_rate': '---'}},
-    #     {"2025-01-02", "regular", "橘萌生", {'contact_name': '橘萌生', 'send_count': '2', 'opens_count': '1', 'open_rate': '50.0%', 'refusals_count': '0', 'entry_count': '1', 'post_opening_entry_rate': '100.0%', 'entry_rate': '50.0%', 'interview_req_count': '1', 'interview_req_rate': '50.0%'}},
-    #     {"2025-01-03", "interested", "奥野翔子", {'contact_name': '奥野翔子', 'interested_count': '2', 'passed_judgement_count': '0', 'passed_judgement_rate': '0.0%', 'refusals_count': '0', 'entry_count': '0','entry_rate': '0.0%', 'interview_req_count': '0', 'interview_req_rate': '---'}},
-    # ]
-
     """
     データをGoogleスプレッドシートに書き込む
     """
@@ -189,38 +210,54 @@ def write_to_google_sheets(all_scout_data):
     )
     gc = gspread.authorize(credentials)
 
-    
+    # バッチ書き込みのためのリクエストリスト
+    requests_by_sheet = {}
 
-
-    # current_month_value = get_current_month()
-    # スプレッドシートを取得
-    sheet = gc.open("テスト").worksheet("シート2")
-    sheet_data = sheet.get_all_values()
-    
-    # 書き込み
     for entry in all_scout_data:
-        print(entry)
-        date = entry["date"]
-        scout_type = entry["data_type"]
-        contact_name = entry["contact_name"]
-        scout_mail_stats_dict = entry["scout_mail_stats_dict"]
-        send_count = scout_mail_stats_dict["send_count"] if scout_type in ["platinum", "regular"] else 0 # 送信数
-        opens_count = scout_mail_stats_dict["opens_count"] if scout_type in ["platinum", "regular"] else 0 # 開封数
-        entry_count = scout_mail_stats_dict["entry_count"]
-        interested_count = scout_mail_stats_dict["interested_count"] if scout_type == "interested" else 0
-        interested_entry_count = scout_mail_stats_dict["entry_count"] if scout_type == "interested" else 0
+        date = entry["date"] # 日付
+        scout_type = entry["data_type"] # スカウトタイプ
+        contact_name = entry["contact_name"] # エージェント名
+        scout_mail_stats_dict = entry["scout_mail_stats_dict"] # 集計データの辞書
+        send_count = int(scout_mail_stats_dict["send_count"]) if scout_type in ["platinum", "regular"] else 0 # 送信数
+        opens_count = int(scout_mail_stats_dict["opens_count"]) if scout_type in ["platinum", "regular"] else 0 # 開封数
+        entry_count = int(scout_mail_stats_dict["entry_count"]) #エントリー数
+        interested_count = int(scout_mail_stats_dict["interested_count"]) if scout_type == "interested" else 0 # 興味あり数
+        interested_entry_count = int(scout_mail_stats_dict["entry_count"]) if scout_type == "interested" else 0 # 興味ありエントリー数
 
-        # 該当セルにデータを書き込む
+        # 該当セルにデータを書き込むリクエストを追加
+        sheet_name = date[:7].replace("-", ".")  # YYYY-MM形式のシート名
+        if sheet_name not in requests_by_sheet:
+            requests_by_sheet[sheet_name] = []
+
         if scout_type in ["platinum", "regular"]:
-          # これで型を確認
-            sheet.update_cell(data_entry_position(contact_name,scout_type), get_column_from_date(date), send_count)  # 送信数
-            sheet.update_cell(data_entry_position(contact_name,scout_type) + 1, get_column_from_date(date), opens_count)   # 開封数
-            sheet.update_cell(data_entry_position(contact_name,scout_type) + 3, get_column_from_date(date), entry_count)  # エントリー数
+            requests_by_sheet[sheet_name].append({
+                'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type)}",
+                'values': [[send_count]]
+            })
+            requests_by_sheet[sheet_name].append({
+                'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type) + 1}",
+                'values': [[opens_count]]
+            })
+            requests_by_sheet[sheet_name].append({
+                'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type) + 3}",
+                'values': [[entry_count]]
+            })
         elif scout_type == "interested":
-            sheet.update_cell(data_entry_position(contact_name,scout_type), get_column_from_date(date), interested_count)  # 興味あり数
-            sheet.update_cell(data_entry_position(contact_name,scout_type) + 1, get_column_from_date(date), interested_entry_count)  # エントリー数
+            requests_by_sheet[sheet_name].append({
+                'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type)}",
+                'values': [[interested_count]]
+            })
+            requests_by_sheet[sheet_name].append({
+                'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type) + 1}",
+                'values': [[interested_entry_count]]
+            })
 
-print("データの更新が完了しました！")
+    # 各シートに対してバッチ書き込みを実行
+    for sheet_name, requests in requests_by_sheet.items():
+        sheet = gc.open("AMBIエントリー分析_エージェント_2024").worksheet(sheet_name)
+        sheet.batch_update(requests)
+
+    print("データの更新が完了しました！")
 
 def main():
     driver = None
@@ -236,11 +273,11 @@ def main():
 
         # データ収集
         today = datetime.today()
-        start_date = today - timedelta(days=3)  # 過去7日分
+        start_date = today - timedelta(days=14)  # 過去14日分
         # 指定するjobNameのリスト
-        contact_names = ["山中沙矢", "橘萌生", "奥野翔子"]
+        contact_names = ["橘萌生", "奥野翔子"]
 
-        for single_date in (start_date + timedelta(n) for n in range(3)):
+        for single_date in (start_date + timedelta(n) for n in range(14)):
             formatted_date = single_date.strftime("%Y-%m-%d")
             print(f"\n{formatted_date}のデータ収集を開始:")
 
@@ -257,7 +294,6 @@ def main():
 
                 time.sleep(1)
         # データをGoogleスプレッドシートに書き込む
-        print(all_scout_data)
         write_to_google_sheets(all_scout_data)
 
     except Exception as e:
