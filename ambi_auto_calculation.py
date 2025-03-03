@@ -141,12 +141,6 @@ def fetch_data_by_contact_names(driver, date, data_type, contact_names):
     
     return results
 
-def get_current_month():
-    today = datetime.today()
-    current_month = f"{today.year}.{today.month:02d}"
-    toStr = str(current_month)
-    return toStr
-
 def data_entry_position(contact_name, scout_type):
     """
     データを書き込む位置を取得
@@ -216,13 +210,8 @@ def write_to_google_sheets(all_scout_data):
     )
     gc = gspread.authorize(credentials)
 
-    current_month = get_current_month()
-
-    # スプレッドシートを取得
-    sheet = gc.open("AMBIエントリー分析_エージェント_2024").worksheet(current_month)
-
     # バッチ書き込みのためのリクエストリスト
-    requests = []
+    requests_by_sheet = {}
 
     for entry in all_scout_data:
         date = entry["date"] # 日付
@@ -236,31 +225,37 @@ def write_to_google_sheets(all_scout_data):
         interested_entry_count = int(scout_mail_stats_dict["entry_count"]) if scout_type == "interested" else 0 # 興味ありエントリー数
 
         # 該当セルにデータを書き込むリクエストを追加
+        sheet_name = date[:7].replace("-", ".")  # YYYY-MM形式のシート名
+        if sheet_name not in requests_by_sheet:
+            requests_by_sheet[sheet_name] = []
+
         if scout_type in ["platinum", "regular"]:
-            requests.append({
+            requests_by_sheet[sheet_name].append({
                 'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type)}",
                 'values': [[send_count]]
             })
-            requests.append({
+            requests_by_sheet[sheet_name].append({
                 'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type) + 1}",
                 'values': [[opens_count]]
             })
-            requests.append({
+            requests_by_sheet[sheet_name].append({
                 'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type) + 3}",
                 'values': [[entry_count]]
             })
         elif scout_type == "interested":
-            requests.append({
+            requests_by_sheet[sheet_name].append({
                 'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type)}",
                 'values': [[interested_count]]
             })
-            requests.append({
+            requests_by_sheet[sheet_name].append({
                 'range': f"{get_column_from_date(date)}{data_entry_position(contact_name, scout_type) + 1}",
                 'values': [[interested_entry_count]]
             })
 
-    # バッチ書き込みを実行
-    sheet.batch_update(requests)
+    # 各シートに対してバッチ書き込みを実行
+    for sheet_name, requests in requests_by_sheet.items():
+        sheet = gc.open("AMBIエントリー分析_エージェント_2024").worksheet(sheet_name)
+        sheet.batch_update(requests)
 
     print("データの更新が完了しました！")
 
